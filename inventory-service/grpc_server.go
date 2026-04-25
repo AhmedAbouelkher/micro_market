@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"micro_market/common"
 	inventoryv1 "micro_market/gen/inventory/v1"
 
 	"google.golang.org/grpc/codes"
@@ -47,7 +48,7 @@ func handleGRPCError(err error) error {
 	if err == nil {
 		return nil
 	}
-	if appErr, ok := err.(*AppError); ok {
+	if appErr, ok := err.(*common.AppError); ok {
 		return appErr.GRPCStatus().Err()
 	}
 	return status.New(codes.Unknown, err.Error()).Err()

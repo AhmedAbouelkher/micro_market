@@ -36,6 +36,9 @@ func GetAllProducts(ctx context.Context) ([]ProductResource, error) {
 func AddNewProduct(ctx context.Context, req *checkoutv1.AddNewProductRequest) error {
 	sCtx, span := telemetry.TraceStart(ctx, "AddNewProduct")
 	defer span.End()
+	if err := common.MaybeError("checkout.AddNewProduct"); err != nil {
+		return err
+	}
 	span.SetAttributes(
 		attribute.String("product.sid", req.Product.Sid),
 		attribute.String("product.name", req.Product.Name),
@@ -65,6 +68,9 @@ func AddNewProduct(ctx context.Context, req *checkoutv1.AddNewProductRequest) er
 func UpdateProduct(ctx context.Context, req *checkoutv1.UpdateProductRequest) error {
 	sCtx, span := telemetry.TraceStart(ctx, "UpdateProduct")
 	defer span.End()
+	if err := common.MaybeError("checkout.UpdateProduct"); err != nil {
+		return err
+	}
 	span.SetAttributes(
 		attribute.String("product.sid", req.Sid),
 		attribute.String("product.name", req.Name),
@@ -101,6 +107,9 @@ func UpdateProduct(ctx context.Context, req *checkoutv1.UpdateProductRequest) er
 func DeleteProduct(ctx context.Context, req *checkoutv1.DeleteProductRequest) error {
 	sCtx, span := telemetry.TraceStart(ctx, "DeleteProduct")
 	defer span.End()
+	if err := common.MaybeError("checkout.DeleteProduct"); err != nil {
+		return err
+	}
 	span.SetAttributes(attribute.String("product.sid", req.Sid))
 
 	ctx, cancel := context.WithTimeout(sCtx, 30*time.Second)

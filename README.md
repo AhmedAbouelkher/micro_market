@@ -46,17 +46,29 @@ The system centers around two application services plus a telemetry stack.
 
 ```mermaid
 flowchart LR
-  User[User / Load Generator] --> Checkout[checkout-service]
-  User --> Inventory[inventory-service]
-  Checkout -->|gRPC| Inventory
-  Inventory -->|gRPC| Checkout
-  Checkout --> OTEL[OpenTelemetry]
-  Inventory --> OTEL
-  OTEL --> LGTM[Grafana OTEL LGTM]
-  LGTM --> Dynatrace[Dynatrace OTLP]
+  User[Client / Load Generator]
+
+  subgraph App[Application layer]
+    Checkout[checkout-service]
+    Inventory[inventory-service]
+    Checkout -->|HTTP API| User
+    Inventory -->|HTTP API| User
+    Checkout <-->|gRPC| Inventory
+  end
+
+  subgraph Obs[Observability layer]
+    OTEL[OpenTelemetry SDKs]
+    LGTM[Grafana OTEL LGTM]
+    Dynatrace[Dynatrace OTLP]
+    OTEL --> LGTM
+    LGTM --> Dynatrace
+  end
+
+  Checkout -. traces / logs / metrics .-> OTEL
+  Inventory -. traces / logs / metrics .-> OTEL
+  User --> Checkout
+  User --> Inventory
 ```
-
-
 
 The `grafana/otel-lgtm` container provides a local observability backend, while the same collector can forward telemetry to Dynatrace for the interview demo.
 
@@ -76,15 +88,18 @@ Owns product stock and reservation logic. It exposes HTTP routes and gRPC handle
 
 [Back to contents](#table-of-contents)
 
-- `checkout-service/`: checkout app, HTTP API, gRPC server, models, DB setup.
-- `inventory-service/`: inventory app, HTTP API, gRPC server, models, DB setup.
-- `common/`: shared OpenTelemetry, JSON, error, and utility helpers.
-- `proto/`: protobuf contracts for service APIs.
-- `gen/`: generated gRPC and protobuf code.
-- `cmd/load-generator/`: traffic generator binary.
-- `scripts/`: helper scripts for local Kubernetes and load generation.
-- `k8s/`: Kubernetes manifests and kustomization.
-- `docker-compose.yml`: local multi-container stack.
+```text
+micro_market/
+├── checkout-service/        checkout app, HTTP API, gRPC server, models, DB setup
+├── inventory-service/       inventory app, HTTP API, gRPC server, models, DB setup
+├── common/                  shared OpenTelemetry, JSON, error, and utility helpers
+├── proto/                   protobuf contracts for service APIs
+├── gen/                     generated gRPC and protobuf code
+├── cmd/load-generator/      traffic generator binary
+├── scripts/                 helper scripts for local Kubernetes and load generation
+├── k8s/                     Kubernetes manifests and customization
+└── docker-compose.yml       local multi-container stack
+```
 
 ## Observability
 
@@ -97,6 +112,11 @@ OpenTelemetry is the main theme of the project:
 - metrics provide a quick view of service health.
 
 Telemetry is exported through the local collector stack and can also be routed to Dynatrace. This makes it easy to compare local behavior with a real observability backend.
+
+| Dynatrace                                          | Grafana                                        |
+| -------------------------------------------------- | ---------------------------------------------- |
+| ![Dynatrace Logs](./demos/logs_dynatrace.png)      | ![Grafana Logs](./demos/logs_grafana.png)      |
+| ![Dynatrace Traces](./demos/tracing_dynatrace.png) | ![Grafana Traces](./demos/tracing_grafana.png) |
 
 ## Communication Flow
 
@@ -123,8 +143,6 @@ sequenceDiagram
   CH-->>C: HTTP response
 ```
 
-
-
 ## Running
 
 [Back to contents](#table-of-contents)
@@ -143,6 +161,8 @@ docker run -p 3000:3000 -p 4317:4317 -p 4318:4318 --rm -ti grafana/otel-lgtm
 
 ### Docker Compose
 
+Use `docker-compose.example.yml` as a reference if you want to plug in your own external collector config. That part is optional.
+
 ```bash
 docker compose up --build
 docker compose down
@@ -151,6 +171,8 @@ docker compose down
 ### Kubernetes
 
 Make sure `kubectl` and `kind` are installed, then make scripts executable and run:
+
+Use `k8s/secrets.example.yaml` as a reference if you want to plug in your own external collector config. That part is optional.
 
 ```bash
 chmod +x ./scripts/*.sh
@@ -182,14 +204,26 @@ I used AI for:
 - Kubernetes grcluster configuration and scripts,
 - improving the `Makefile` for better developer experience.
 
+`.cursor/` tree:
+
+```text
+.cursor/
+├── rules/
+│   ├── Caveman.mdc
+│   └── General-Project-Rules.mdc
+└── skills/
+    └── caveman/
+        └── SKILL.md
+```
+
 ## Resources
 
 [Back to contents](#table-of-contents)
 
 - [https://github.com/open-telemetry/opentelemetry-demo](https://github.com/open-telemetry/opentelemetry-demo)
 - [https://www.dynatrace.com/news/blog/opentelemetry-demo-application-with-dynatrace/](https://www.dynatrace.com/news/blog/opentelemetry-demo-application-with-dynatrace/)
+- [https://docs.dynatrace.com/docs/ingest-from/opentelemetry/otlp-api](https://docs.dynatrace.com/docs/ingest-from/opentelemetry/otlp-api)
 - [https://opentelemetry.io/docs/languages/go/instrumentation/](https://opentelemetry.io/docs/languages/go/instrumentation/)
 - [https://opentelemetry.io/docs/collector/](https://opentelemetry.io/docs/collector/)
 - [https://grpc.io/docs/languages/go/basics/](https://grpc.io/docs/languages/go/basics/)
 - [https://www.lucavall.in/blog/opentelemetry-a-guide-to-observability-with-go](https://www.lucavall.in/blog/opentelemetry-a-guide-to-observability-with-go)
-

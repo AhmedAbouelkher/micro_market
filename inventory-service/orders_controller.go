@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"micro_market/common"
 	"net/http"
 	"time"
 
@@ -41,6 +42,9 @@ type PlaceOrderRequest struct {
 func PlaceNewOrder(ctx context.Context, req PlaceOrderRequest) (*OrderResource, error) {
 	sCtx, span := telemetry.TraceStart(ctx, "PlaceNewOrder")
 	defer span.End()
+	if err := common.MaybeError("inventory.PlaceNewOrder"); err != nil {
+		return nil, err
+	}
 	span.SetAttributes(
 		attribute.Int64("order.user_id", int64(req.UserID)),
 		attribute.String("order.product_sid", req.ProductSID),
@@ -59,10 +63,10 @@ func PlaceNewOrder(ctx context.Context, req PlaceOrderRequest) (*OrderResource, 
 		return nil, err
 	}
 	if product.ID == 0 {
-		return nil, NewAppError(http.StatusBadRequest, "product: %s not found", req.ProductSID)
+		return nil, common.NewAppError(http.StatusNotFound, "product not found")
 	}
 	if product.IsOutOfStock() || product.GetAvailableQuantity() < req.Quantity {
-		return nil, NewAppError(http.StatusBadRequest, "product: %s is out of stock", req.ProductSID)
+		return nil, common.NewAppError(http.StatusBadRequest, "product out of stock")
 	}
 	order := OrderModel{
 		SID:          req.OrderSID,

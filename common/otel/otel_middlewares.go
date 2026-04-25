@@ -35,7 +35,7 @@ func (t *Telemetry) LogRequest(next http.Handler) http.Handler {
 
 func (t *Telemetry) MeterRequestDuration(next http.Handler) http.Handler {
 	histogram, err := t.MeterInt64Histogram(Metric{
-		Name:        "http.request.duration",
+		Name:        "micro_market.http.server.request.duration",
 		Unit:        "ms",
 		Description: "The duration of the HTTP request",
 	})
@@ -60,7 +60,7 @@ func (t *Telemetry) MeterRequestDuration(next http.Handler) http.Handler {
 
 func (t *Telemetry) MeterRequestInFlight(next http.Handler) http.Handler {
 	counter, err := t.MeterInt64UpDownCounter(Metric{
-		Name:        "http.request.in_flight",
+		Name:        "micro_market.http.server.active_requests",
 		Unit:        "{count}",
 		Description: "The number of HTTP requests that are in flight",
 	})
@@ -71,16 +71,16 @@ func (t *Telemetry) MeterRequestInFlight(next http.Handler) http.Handler {
 		attrs := metric.WithAttributes(httpconv.ServerRequest(t.GetServiceName(), r)...)
 
 		counter.Add(r.Context(), 1, attrs)
+		defer counter.Add(r.Context(), -1, attrs)
 
 		next.ServeHTTP(w, r)
 
-		counter.Add(r.Context(), -1, attrs)
 	})
 }
 
 func (t *Telemetry) MeterRequestStatus(next http.Handler) http.Handler {
 	counter, err := t.MeterInt64Counter(Metric{
-		Name:        "http.response.status",
+		Name:        "micro_market.http.server.response.count",
 		Unit:        "{count}",
 		Description: "The number of HTTP responses by status code",
 	})

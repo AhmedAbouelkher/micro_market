@@ -46,6 +46,9 @@ type PlaceOrderRequest struct {
 func PlaceNewOrder(ctx context.Context, req PlaceOrderRequest) (*OrderResource, error) {
 	sCtx, span := telemetry.TraceStart(ctx, "PlaceNewOrder")
 	defer span.End()
+	if err := common.MaybeError("checkout.PlaceNewOrder"); err != nil {
+		return nil, err
+	}
 	span.SetAttributes(
 		attribute.Int64("order.user_id", int64(req.UserID)),
 		attribute.Int64("order.product_id", int64(req.ProductID)),

@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/brianvoe/gofakeit/v6"
@@ -39,23 +40,32 @@ type config struct {
 	InventoryURL string
 	Duration     time.Duration
 	Interval     time.Duration
+	Concurrency  int
 	SeedProducts int
-	UserID       uint
+	UserIDs      []uint
 }
 
 func main() {
 	var cfg config
-	var userID uint
+	var userIDs string
 	flag.StringVar(&cfg.CheckoutURL, "checkout-url", envOr("CHECKOUT_URL", "http://localhost:8888"), "checkout service base URL")
 	flag.StringVar(&cfg.InventoryURL, "inventory-url", envOr("INVENTORY_URL", "http://localhost:9999"), "inventory service base URL")
 	flag.DurationVar(&cfg.Duration, "duration", mustDuration(envOr("DURATION", "30s")), "how long to run")
 	flag.DurationVar(&cfg.Interval, "interval", mustDuration(envOr("INTERVAL", "500ms")), "delay between requests")
+	flag.IntVar(&cfg.Concurrency, "concurrency", envOrInt("CONCURRENCY", 1), "max in-flight requests")
 	flag.IntVar(&cfg.SeedProducts, "seed-products", envOrInt("SEED_PRODUCTS", 5), "products to create if list is empty")
-	flag.UintVar(&userID, "user-id", uint(envOrInt("USER_ID", 1)), "user id used for orders")
+	flag.StringVar(&userIDs, "user-ids", envOr("USER_IDS", ""), "comma-separated user ids used for orders")
 	flag.Parse()
-	cfg.UserID = userID
+	if cfg.Concurrency < 1 {
+		cfg.Concurrency = 1
+	}
+	var err error
+	cfg.UserIDs, err = parseUserIDs(userIDs)
+	if err != nil {
+		fail(err)
+	}
 
-	log.Printf("load-generator start checkout=%s inventory=%s duration=%s interval=%s seed_products=%d user_id=%d", cfg.CheckoutURL, cfg.InventoryURL, cfg.Duration, cfg.Interval, cfg.SeedProducts, cfg.UserID)
+	log.Printf("load-generator start checkout=%s inventory=%s duration=%s interval=%s concurrency=%d seed_products=%d user_ids=%v", cfg.CheckoutURL, cfg.InventoryURL, cfg.Duration, cfg.Interval, cfg.Concurrency, cfg.SeedProducts, cfg.UserIDs)
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	gofakeit.Seed(time.Now().UnixNano())
@@ -82,15 +92,37 @@ func main() {
 	ticker := time.NewTicker(cfg.Interval)
 	defer ticker.Stop()
 
+	var (
+		sem = make(chan struct{}, cfg.Concurrency)
+		wg  sync.WaitGroup
+		mu  sync.Mutex
+	)
+
 	for {
 		select {
 		case <-ctx.Done():
+			wg.Wait()
 			log.Printf("load-generator done")
 			return
 		case <-ticker.C:
-			op := ops[rng.Intn(len(ops))]
-			if err := op(ctx, client, cfg, rng, products); err != nil {
-				log.Printf("op error: %v", err)
+			select {
+			case sem <- struct{}{}:
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					defer func() { <-sem }()
+
+					mu.Lock()
+					op := ops[rng.Intn(len(ops))]
+					opRng := rand.New(rand.NewSource(rng.Int63()))
+					mu.Unlock()
+
+					if err := op(ctx, client, cfg, opRng, products); err != nil {
+						log.Printf("op error: %v", err)
+					}
+				}()
+			default:
+				// do nothing
 			}
 		}
 	}
@@ -173,14 +205,15 @@ func deleteProduct(ctx context.Context, client *http.Client, cfg config, rng *ra
 }
 
 func placeOrder(ctx context.Context, client *http.Client, cfg config, rng *rand.Rand, products []product) error {
-	if len(products) == 0 {
+	if len(products) == 0 || len(cfg.UserIDs) == 0 {
 		return nil
 	}
 	p := products[rng.Intn(len(products))]
 	qty := 1 + rng.Intn(3)
-	log.Printf("POST checkout order user_id=%d product_id=%d qty=%d", cfg.UserID, p.ID, qty)
+	userID := cfg.UserIDs[rng.Intn(len(cfg.UserIDs))]
+	log.Printf("POST checkout order user_id=%d product_id=%d qty=%d", userID, p.ID, qty)
 	req := map[string]any{
-		"user_id":    cfg.UserID,
+		"user_id":    userID,
 		"product_id": p.ID,
 		"quantity":   qty,
 	}
@@ -243,6 +276,29 @@ func envOrInt(key string, def int) int {
 		}
 	}
 	return def
+}
+
+func parseUserIDs(v string) ([]uint, error) {
+	if strings.TrimSpace(v) == "" {
+		return nil, fmt.Errorf("user ids required: set --user-ids or USER_IDS")
+	}
+	parts := strings.Split(v, ",")
+	ids := make([]uint, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		var id uint
+		if _, err := fmt.Sscanf(part, "%d", &id); err != nil {
+			return nil, fmt.Errorf("invalid user id %q", part)
+		}
+		ids = append(ids, id)
+	}
+	if len(ids) == 0 {
+		return nil, fmt.Errorf("user ids required: set --user-ids or USER_IDS")
+	}
+	return ids, nil
 }
 
 func mustDuration(v string) time.Duration {

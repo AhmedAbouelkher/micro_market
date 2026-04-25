@@ -35,9 +35,11 @@ To run and play with the project you have 3 options:
   - `CHECKOUT_SERVICE_ADDRESS=localhost:8080 GRPC_PORT=9090 HTTP_PORT=9999 make run_inventory``
   - `docker run -p 3000:3000 -p 4317:4317 -p 4318:4318 --rm -ti grafana/otel-lgtm`
 - Using docker compose (docker must be installed on your machine):
-  - `docker compose up --build``
+  - Take a look at @docker-compose.example.yml and use your own external collector configs. Using an external collector is totally optional.
+  - `docker compose up --build`
   - `docker compose down`
 - Using Kubernetes (kubectl and kind must be installed on your machine & make sure that scripts are executable)
+  - Take a look at @k8s/secrets.example.yaml and use your own external collector configs. Using an external collector is totally optional.
   - `chmod +x ./scripts/*.sh`
   - `./scripts/k8s-up.sh`
   - `./scripts/k8s-down.sh`
@@ -60,6 +62,7 @@ I used AI in this project for the following roles:
 - <https://opentelemetry.io/docs/collector/>
 - <https://grpc.io/docs/languages/go/basics/>
 - <https://www.lucavall.in/blog/opentelemetry-a-guide-to-observability-with-go>
+- <https://docs.dynatrace.com/docs/ingest-from/opentelemetry/otlp-api>
 
 ## Output
 

@@ -36,6 +36,9 @@ func GetAllProducts(ctx context.Context) ([]ProductResource, error) {
 func GetProduct(ctx context.Context, id uint) (*ProductResource, error) {
 	sCtx, span := telemetry.TraceStart(ctx, "GetProduct")
 	defer span.End()
+	if err := common.MaybeError("inventory.GetProduct"); err != nil {
+		return nil, err
+	}
 
 	ctx, cancel := context.WithTimeout(sCtx, 30*time.Second)
 	defer cancel()
@@ -49,7 +52,7 @@ func GetProduct(ctx context.Context, id uint) (*ProductResource, error) {
 		return nil, err
 	}
 	if product.ID == 0 {
-		return nil, NewAppError(http.StatusNotFound, "product: %s not found", product.SID)
+		return nil, common.NewAppError(http.StatusNotFound, "product not found")
 	}
 	resource := product.ToResource()
 	return &resource, nil
@@ -65,6 +68,9 @@ type CreateProductRequest struct {
 func CreateProduct(ctx context.Context, req CreateProductRequest) (*ProductResource, error) {
 	sCtx, span := telemetry.TraceStart(ctx, "CreateProduct")
 	defer span.End()
+	if err := common.MaybeError("inventory.CreateProduct"); err != nil {
+		return nil, err
+	}
 	span.SetAttributes(
 		attribute.String("product.name", req.Name),
 		attribute.Int("product.price", req.Price),
@@ -88,7 +94,7 @@ func CreateProduct(ctx context.Context, req CreateProductRequest) (*ProductResou
 		}
 		c := GetCheckoutClient()
 		if c == nil {
-			return NewAppError(http.StatusInternalServerError, "checkout client not initialized")
+			return common.NewAppError(http.StatusInternalServerError, "checkout client not initialized")
 		}
 		_, err := c.AddNewProduct(ctx, &checkoutv1.AddNewProductRequest{
 			Product: &commonv1.Product{
@@ -118,6 +124,9 @@ type UpdateProductRequest struct {
 func UpdateProduct(ctx context.Context, id uint, req UpdateProductRequest) (*ProductResource, error) {
 	sCtx, span := telemetry.TraceStart(ctx, "UpdateProduct")
 	defer span.End()
+	if err := common.MaybeError("inventory.UpdateProduct"); err != nil {
+		return nil, err
+	}
 	span.SetAttributes(
 		attribute.Int64("product.id", int64(id)),
 		attribute.String("product.name", req.Name),
@@ -138,7 +147,7 @@ func UpdateProduct(ctx context.Context, id uint, req UpdateProductRequest) (*Pro
 		return nil, err
 	}
 	if product.ID == 0 {
-		return nil, NewAppError(http.StatusNotFound, "product: %s not found", product.SID)
+		return nil, common.NewAppError(http.StatusNotFound, "product not found")
 	}
 	product.Name = req.Name
 	product.Price = req.Price
@@ -156,7 +165,7 @@ func UpdateProduct(ctx context.Context, id uint, req UpdateProductRequest) (*Pro
 		}
 		c := GetCheckoutClient()
 		if c == nil {
-			return NewAppError(http.StatusInternalServerError, "checkout client not initialized")
+			return common.NewAppError(http.StatusInternalServerError, "checkout client not initialized")
 		}
 		_, err := c.UpdateProduct(ctx, &checkoutv1.UpdateProductRequest{
 			Sid:               product.SID,
@@ -178,6 +187,9 @@ func UpdateProduct(ctx context.Context, id uint, req UpdateProductRequest) (*Pro
 func DeleteProduct(ctx context.Context, id uint) error {
 	sCtx, span := telemetry.TraceStart(ctx, "DeleteProduct")
 	defer span.End()
+	if err := common.MaybeError("inventory.DeleteProduct"); err != nil {
+		return err
+	}
 	span.SetAttributes(attribute.Int64("product.id", int64(id)))
 
 	ctx, cancel := context.WithTimeout(sCtx, 30*time.Second)
@@ -193,7 +205,7 @@ func DeleteProduct(ctx context.Context, id uint) error {
 		return err
 	}
 	if product.ID == 0 {
-		return NewAppError(http.StatusNotFound, "product: %s not found", product.SID)
+		return common.NewAppError(http.StatusNotFound, "product not found")
 	}
 
 	span.SetAttributes(attribute.String("product.sid", product.SID))
@@ -206,7 +218,7 @@ func DeleteProduct(ctx context.Context, id uint) error {
 		}
 		c := GetCheckoutClient()
 		if c == nil {
-			return NewAppError(http.StatusInternalServerError, "checkout client not initialized")
+			return common.NewAppError(http.StatusInternalServerError, "checkout client not initialized")
 		}
 		_, err := c.DeleteProduct(ctx, &checkoutv1.DeleteProductRequest{Sid: product.SID})
 		return err
@@ -239,7 +251,7 @@ func CheckProductAvailability(ctx context.Context, sid string, quantity int) (*P
 		return nil, err
 	}
 	if product.ID == 0 {
-		return nil, NewAppError(http.StatusNotFound, "product: %s not found", sid)
+		return nil, common.NewAppError(http.StatusNotFound, "product not found")
 	}
 	return &ProductAvailabilityResponse{
 		IsAvailable:       product.GetAvailableQuantity() >= quantity,

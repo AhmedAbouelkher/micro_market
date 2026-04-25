@@ -1,6 +1,6 @@
 FROM alpine:latest AS builder
 
-RUN apk add --no-cache gcc make wget libtool automake autoconf unzip musl-dev pkgconf m4
+RUN apk add --no-cache gcc make wget git libtool automake autoconf unzip musl-dev pkgconf m4
 
 WORKDIR /tmp
 
@@ -18,6 +18,7 @@ RUN wget -O libuv.tar.gz https://dist.libuv.org/dist/v1.9.1/libuv-v1.9.1.tar.gz 
 
 WORKDIR /app
 COPY . .
+RUN git submodule update --init --recursive
 RUN gcc -Wall -Wextra -DEPOLL invoice-service/main.c -o service_app $(pkg-config --cflags --libs libuv hiredis)
 
 FROM alpine:latest

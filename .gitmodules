@@ -1,0 +1,6 @@
+[submodule "invoice-service/libs/httpserver.h"]
+	path = invoice-service/libs/httpserver.h
+	url = https://github.com/AhmedAbouelkher/httpserver.h.git
+[submodule "invoice-service/libs/PDFGen"]
+	path = invoice-service/libs/PDFGen
+	url = https://github.com/AndreRenaud/PDFGen.git

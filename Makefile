@@ -20,7 +20,8 @@ build_inventory:
 	cd inventory-service && go build -o $(BINARY_DIR)/service .
 
 build_invoice:
-	cd invoice-service && gcc -Wall -Wextra -fsanitize=address -DEPOLL main.c -o checkout_service $$(pkg-config --cflags --libs libuv hiredis)
+	git submodule update --init --recursive
+	cd invoice-service && gcc -Wall -Wextra -fsanitize=address -DEPOLL main.c -o service_app $$(pkg-config --cflags --libs libuv hiredis)
 
 docker-build-checkout: gen
 	docker build -f checkout-service/Dockerfile -t micro_market-checkout .

@@ -8,7 +8,9 @@
 #include "hiredis/hiredis.h"
 
 #define HTTPSERVER_IMPL
-#include "httpserver.h"
+#include "libs/httpserver.h/httpserver.h"
+
+#include "libs/PDFGen/pdfgen.h" // TODO: use PDFGen to generate the invoice
 
 // https://stackoverflow.com/questions/39486327/stdout-being-buffered-in-docker-container
 

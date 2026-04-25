@@ -1,4 +1,7 @@
 services:
+  redis:
+    image: redis:8.4.2-alpine
+  
   checkout:
     build:
       context: .
@@ -6,6 +9,8 @@ services:
     environment:
       OTEL_COLLECTOR_ENDPOINT: grafana-otel:4317
       INVENTORY_SERVICE_ADDRESS: inventory:50051
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       SERVICE_NAME: checkout-service
       SERVICE_VERSION: 0.0.1
     volumes:
@@ -13,6 +18,7 @@ services:
     ports:
       - "8888:1234"
       # - "8080:50051"
+
 
   inventory:
     build:
@@ -30,7 +36,19 @@ services:
       # - "9099:50051"
     depends_on:
       - checkout
-      - grafana-otel
+  
+  invoice:
+    build:
+      context: .
+      dockerfile: invoice-service/Dockerfile
+    environment:
+      HTTP_PORT: 8080
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "4123:8080"
+    depends_on:
+      - redis
 
   grafana-otel:
     image: grafana/otel-lgtm:latest

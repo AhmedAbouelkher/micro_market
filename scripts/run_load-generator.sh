@@ -2,6 +2,7 @@
 
 export CHECKOUT_URL="http://localhost:8888"
 export INVENTORY_URL="http://localhost:9999"
+export INVOICE_URL="http://localhost:4123"
 export DURATION=10m
 export INTERVAL=100ms
 export CONCURRENCY=10

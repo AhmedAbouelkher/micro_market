@@ -9,10 +9,12 @@ fi
 
 docker build -t checkout-service:local -f checkout-service/Dockerfile . &
 docker build -t inventory-service:local -f inventory-service/Dockerfile . &
+docker build -t invoice-service:local -f invoice-service/Dockerfile . &
 wait
 
 kind load docker-image checkout-service:local --name "$cluster_name" &
 kind load docker-image inventory-service:local --name "$cluster_name" &
+kind load docker-image invoice-service:local --name "$cluster_name" &
 wait
 
 kubectl apply -k k8s

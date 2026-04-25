@@ -23,6 +23,10 @@ spec:
               value: grafana-otel:4317
             - name: INVENTORY_SERVICE_ADDRESS
               value: inventory:50051
+            - name: REDIS_HOST
+              value: redis
+            - name: REDIS_PORT
+              value: "6379"
             - name: SERVICE_NAME
               value: checkout-service
             - name: SERVICE_VERSION

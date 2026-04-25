@@ -7,3 +7,5 @@ resources:
   - grafana-otel.yaml
   - checkout.yaml
   - inventory.yaml
+  - invoice.yaml
+  - redis.yaml

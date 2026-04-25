@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package inventory.v1;
+
+option go_package = "micro_market/gen/inventory/v1;inventoryv1";
+
+service InventoryService {
+    rpc ReserveProduct(ReserveProductRequest) returns (ReserveProductResponse);
+    rpc RegisterOrder(RegisterOrderRequest) returns (RegisterOrderResponse);
+}
+
+message ReserveProductRequest {
+    string sid = 1;
+    int32 quantity = 2;
+}
+
+message ReserveProductResponse {
+    int32 available_quantity = 1;
+    bool out_of_stock = 2;
+    bool is_available = 3;
+}
+
+message RegisterOrderRequest {
+    string order_sid = 1;
+    int32 user_id = 2;
+    string product_sid = 3;
+    int32 quantity = 4;    
+}
+
+message RegisterOrderResponse {
+    bool success = 1;
+}

@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: checkout
+  template:
+    metadata:
+      labels:
+        app: checkout
+    spec:
+      containers:
+        - name: checkout
+          image: checkout-service:local
+          ports:
+            - containerPort: 1234
+            - containerPort: 50051
+          env:
+            - name: OTEL_COLLECTOR_ENDPOINT
+              value: grafana-otel:4317
+            - name: INVENTORY_SERVICE_ADDRESS
+              value: inventory:50051
+            - name: SERVICE_NAME
+              value: checkout-service
+            - name: SERVICE_VERSION
+              value: 0.0.1
+          readinessProbe:
+            tcpSocket:
+              port: 1234
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 1234
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: checkout
+spec:
+  selector:
+    app: checkout
+  ports:
+    - name: http
+      port: 1234
+      targetPort: 1234
+    - name: grpc
+      port: 50051
+      targetPort: 50051

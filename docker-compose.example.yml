@@ -1,0 +1,51 @@
+services:
+  checkout:
+    build:
+      context: .
+      dockerfile: checkout-service/Dockerfile
+    environment:
+      OTEL_COLLECTOR_ENDPOINT: grafana-otel:4317
+      INVENTORY_SERVICE_ADDRESS: inventory:50051
+      SERVICE_NAME: checkout-service
+      SERVICE_VERSION: 0.0.1
+    volumes:
+      - checkout-db:/usr/src/app/data
+    ports:
+      - "8888:1234"
+      # - "8080:50051"
+
+  inventory:
+    build:
+      context: .
+      dockerfile: inventory-service/Dockerfile
+    environment:
+      OTEL_COLLECTOR_ENDPOINT: grafana-otel:4317
+      CHECKOUT_SERVICE_ADDRESS: checkout:50051
+      SERVICE_NAME: inventory-service
+      SERVICE_VERSION: 0.5.2
+    volumes:
+      - inventory-db:/usr/src/app/data
+    ports:
+      - "9999:1234"
+      # - "9099:50051"
+    depends_on:
+      - checkout
+      - grafana-otel
+
+  grafana-otel:
+    image: grafana/otel-lgtm:latest
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS}
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "3000:3000"
+      - "3200:3200"
+      - "4040:4040"
+      - "9090:9090"
+
+volumes:
+  checkout-db:
+  inventory-db:

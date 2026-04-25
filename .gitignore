@@ -1,0 +1,10 @@
+.DS_Store
+
+.vscode/
+.cursor/
+bin/
+gen/
+
+*.db
+service
+docker-compose.yml

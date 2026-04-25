@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana-otel
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana-otel
+  template:
+    metadata:
+      labels:
+        app: grafana-otel
+    spec:
+      containers:
+        - name: grafana-otel
+          image: grafana/otel-lgtm:latest
+          ports:
+            - containerPort: 4317
+            - containerPort: 4318
+            - containerPort: 3000
+            - containerPort: 3200
+            - containerPort: 4040
+            - containerPort: 9090
+          env:
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-otel-secret
+                  key: otlp-endpoint
+            - name: OTEL_EXPORTER_OTLP_HEADERS
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-otel-secret
+                  key: otlp-headers
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: http/protobuf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-otel
+spec:
+  selector:
+    app: grafana-otel
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+    - name: grafana
+      port: 3000
+      targetPort: 3000
+    - name: tempo
+      port: 3200
+      targetPort: 3200
+    - name: pyroscope
+      port: 4040
+      targetPort: 4040
+    - name: prometheus
+      port: 9090
+      targetPort: 9090

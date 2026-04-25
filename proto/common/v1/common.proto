@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package common.v1;
+
+option go_package = "micro_market/gen/common/v1;commonv1";
+
+message Product {
+  string sid = 1;
+  string name = 2;
+  int32 price = 3;
+  string currency = 4;
+  bool out_of_stock = 5;
+}
+
+message Order {
+  string sid = 1;
+  uint64 user_id = 2;
+  uint64 product_id = 3;
+  int32 quantity = 4;
+  int32 price_per_item = 5;
+  int32 total = 6;
+}

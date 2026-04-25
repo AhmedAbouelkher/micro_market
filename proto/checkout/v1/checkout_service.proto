@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package checkout.v1;
+
+import "common/v1/common.proto";
+
+option go_package = "micro_market/gen/checkout/v1;checkoutv1";
+
+service CheckoutService {
+  rpc AddNewProduct(AddNewProductRequest) returns (AddNewProductResponse);
+  rpc UpdateProduct(UpdateProductRequest) returns (UpdateProductResponse);
+  rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse);
+}
+
+message AddNewProductRequest {
+  common.v1.Product product = 1;
+}
+
+message AddNewProductResponse {
+  bool success = 1;
+}
+
+message UpdateProductRequest {
+  string sid = 1;
+  string name = 2;
+  int32 price = 3;
+  string currency = 4;
+  int32 available_quantity = 5;
+  bool out_of_stock = 6;
+}
+
+message UpdateProductResponse {
+  bool success = 1;
+}
+
+message DeleteProductRequest {
+  string sid = 1;
+}
+
+message DeleteProductResponse {
+  bool success = 1;
+}

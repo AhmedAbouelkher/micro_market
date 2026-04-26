@@ -2,6 +2,24 @@ services:
   redis:
     image: redis:8.4.2-alpine
   
+  invoice:
+    build:
+      context: .
+      dockerfile: invoice-service/Dockerfile
+    environment:
+      HTTP_PORT: 8080
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SERVICE_NAME: invoice-service
+      SERVICE_VERSION: 0.8.4
+      REDIS_CHANNEL: create_invoice
+    volumes:
+      - invoice-db:/usr/src/app/data
+    ports:
+      - "4123:8080"
+    depends_on:
+      - redis
+
   checkout:
     build:
       context: .
@@ -13,11 +31,14 @@ services:
       REDIS_PORT: 6379
       SERVICE_NAME: checkout-service
       SERVICE_VERSION: 0.0.1
+      REDIS_CHANNEL: create_invoice
     volumes:
       - checkout-db:/usr/src/app/data
     ports:
       - "8888:1234"
       # - "8080:50051"
+    depends_on:
+      - redis
 
 
   inventory:
@@ -36,19 +57,7 @@ services:
       # - "9099:50051"
     depends_on:
       - checkout
-  
-  invoice:
-    build:
-      context: .
-      dockerfile: invoice-service/Dockerfile
-    environment:
-      HTTP_PORT: 8080
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-    ports:
-      - "4123:8080"
-    depends_on:
-      - redis
+
 
   grafana-otel:
     image: grafana/otel-lgtm:latest
@@ -67,3 +76,4 @@ services:
 volumes:
   checkout-db:
   inventory-db:
+  invoice-db:

@@ -68,6 +68,12 @@ func PlaceNewOrder(ctx context.Context, req PlaceOrderRequest) (*OrderResource, 
 	if product.IsOutOfStock() || product.GetAvailableQuantity() < req.Quantity {
 		return nil, common.NewAppError(http.StatusBadRequest, "product out of stock")
 	}
+	// update the available quantity
+	product.AvailableQuantity = common.IntPtr(product.GetAvailableQuantity() - req.Quantity)
+	if product.GetAvailableQuantity() <= 0 {
+		product.OutOfStock = common.BoolPtr(true)
+	}
+
 	order := OrderModel{
 		SID:          req.OrderSID,
 		UserID:       req.UserID,
@@ -76,9 +82,18 @@ func PlaceNewOrder(ctx context.Context, req PlaceOrderRequest) (*OrderResource, 
 		PricePerItem: product.Price,
 		Total:        req.Quantity * product.Price,
 	}
-	if err := dbInstance.WithContext(ctx).
-		Create(&order).Error; err != nil {
-		return nil, err
+	txErr := dbInstance.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Updates(&product).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Create(&order).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+	if txErr != nil {
+		return nil, txErr
 	}
 	r := order.ToResource()
 	return &r, nil

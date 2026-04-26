@@ -51,7 +51,7 @@ func main() {
 
 	// Seed DB
 	if err := RunSeed(ctx); err != nil {
-		panic(err)
+		telemetry.LogFatallnf("failed to seed DB: %v", err)
 	}
 	log.Println("DB was seeded")
 

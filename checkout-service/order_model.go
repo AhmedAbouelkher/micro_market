@@ -25,7 +25,9 @@ type OrderModel struct {
 }
 
 func (o *OrderModel) BeforeCreate(tx *gorm.DB) (err error) {
-	o.SID = ulid.Make().String()
+	if o.SID == "" {
+		o.SID = ulid.Make().String()
+	}
 	return
 }
 

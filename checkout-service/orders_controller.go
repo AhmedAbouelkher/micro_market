@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"micro_market/common"
 	inventoryv1 "micro_market/gen/inventory/v1"
@@ -58,14 +59,15 @@ func PlaceNewOrder(ctx context.Context, req PlaceOrderRequest) (*OrderResource, 
 	ctx, cancel := context.WithTimeout(sCtx, time.Minute)
 	defer cancel()
 
-	var userCount int64
+	user := UserModel{}
 	if err := dbInstance.WithContext(ctx).
 		Model(UserModel{}).
 		Where("id = ?", req.UserID).
-		Count(&userCount).Error; err != nil {
+		First(&user).Error; err != nil &&
+		!errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
-	if userCount <= 0 {
+	if user.ID == 0 {
 		return nil, common.NewAppError(http.StatusBadRequest, "user: %d not found", req.UserID)
 	}
 
@@ -78,7 +80,7 @@ func PlaceNewOrder(ctx context.Context, req PlaceOrderRequest) (*OrderResource, 
 		return nil, err
 	}
 	if product.ID == 0 {
-		return nil, common.NewAppError(http.StatusBadRequest, "product: %s not found", product.SID)
+		return nil, common.NewAppError(http.StatusBadRequest, "product: %d not found", req.ProductID)
 	}
 
 	inventoryClient := GetInventoryClient()
@@ -112,9 +114,11 @@ func PlaceNewOrder(ctx context.Context, req PlaceOrderRequest) (*OrderResource, 
 	}
 
 	order := OrderModel{
-		UserID:    req.UserID,
-		ProductID: req.ProductID,
-		Quantity:  req.Quantity,
+		UserID:       req.UserID,
+		ProductID:    req.ProductID,
+		Quantity:     req.Quantity,
+		PricePerItem: product.Price,
+		Total:        req.Quantity * product.Price,
 	}
 	txErr := dbInstance.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&order).Error; err != nil {
@@ -143,6 +147,30 @@ func PlaceNewOrder(ctx context.Context, req PlaceOrderRequest) (*OrderResource, 
 
 		return err
 	})
+	if txErr != nil {
+		return nil, txErr
+	}
+
+	{ // Invoice creation request
+		payload := map[string]any{
+			// For the DB and PDF generation
+			"order_sid":   order.SID,
+			"user_id":     user.ID,
+			"product_sid": product.SID,
+			// For the PDF generation
+			"quantity":      order.Quantity,
+			"product_price": product.Price,
+			"currency":      product.Currency,
+			"total":         order.Total,
+			"user_name":     user.Name,
+			"user_email":    user.Email,
+			"product_name":  product.Name,
+		}
+		json, _ := json.Marshal(payload)
+		if err := redisClient.Publish(ctx, RedisChannel, json).Err(); err != nil {
+			telemetry.LogErrorlnf("failed to publish invoice creation request to Redis: %v", err)
+		}
+	}
 
 	r := order.ToResource()
 	return &r, txErr

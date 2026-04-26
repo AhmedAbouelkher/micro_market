@@ -47,6 +47,13 @@ func main() {
 	defer closeDB()
 	log.Println("DB was initialized")
 
+	// Init Redis DB
+	if err := InitRedisDB(ctx); err != nil {
+		panic(err)
+	}
+	defer CloseRedisDB()
+	log.Println("Redis DB was initialized")
+
 	// Init GRPC Clients
 	initGRPCClients()
 	defer CloseInventoryClient()

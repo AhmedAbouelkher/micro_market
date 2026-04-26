@@ -11,7 +11,7 @@ run_inventory: gen tidy build_inventory
 	cd inventory-service && ./$(BINARY_DIR)/service
 
 run_invoice: build_invoice
-	cd invoice-service && ./checkout_service
+	cd invoice-service && ./service_app
 
 build_checkout:
 	cd checkout-service && go build -o $(BINARY_DIR)/service .
@@ -20,8 +20,9 @@ build_inventory:
 	cd inventory-service && go build -o $(BINARY_DIR)/service .
 
 build_invoice:
-	git submodule update --init --recursive
-	cd invoice-service && gcc -Wall -Wextra -fsanitize=address -DEPOLL main.c -o service_app $$(pkg-config --cflags --libs libuv hiredis)
+	cd invoice-service && gcc -fsanitize=address \
+		-DKQUEUE main.c ./libs/ulid/ulid.c ./libs/PDFGen/pdfgen.c \
+		-o service_app $$(pkg-config --cflags --libs libuv hiredis)
 
 docker-build-checkout: gen
 	docker build -f checkout-service/Dockerfile -t micro_market-checkout .

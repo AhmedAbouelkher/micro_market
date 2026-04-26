@@ -4,3 +4,9 @@
 [submodule "invoice-service/libs/PDFGen"]
 	path = invoice-service/libs/PDFGen
 	url = https://github.com/AndreRenaud/PDFGen.git
+[submodule "invoice-service/libs/httpserver"]
+	path = invoice-service/libs/httpserver
+	url = https://github.com/AhmedAbouelkher/httpserver.git
+[submodule "invoice-service/libs/ulid"]
+	path = invoice-service/libs/ulid
+	url = https://github.com/skeeto/ulid-c.git

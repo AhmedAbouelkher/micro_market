@@ -44,6 +44,7 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 	_, span := telemetry.TraceStart(r.Context(), "GET /health")
 	defer span.End()
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]any{"message": "OK"})
 }

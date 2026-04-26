@@ -19,7 +19,7 @@ RUN wget -O libuv.tar.gz https://dist.libuv.org/dist/v1.9.1/libuv-v1.9.1.tar.gz 
 WORKDIR /app
 COPY . .
 RUN git submodule update --init --recursive
-RUN gcc -Wall -Wextra -DEPOLL invoice-service/main.c -o service_app $(pkg-config --cflags --libs libuv hiredis)
+RUN gcc -Wall -Wextra -DEPOLL invoice-service/main.c invoice-service/libs/ulid/ulid.c invoice-service/libs/PDFGen/pdfgen.c -o service_app $(pkg-config --cflags --libs libuv hiredis)
 
 FROM alpine:latest
 

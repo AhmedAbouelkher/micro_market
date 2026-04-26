@@ -44,7 +44,7 @@ func RunSeed(ctx context.Context) error {
 						return err
 					}
 					for _, product := range products {
-						_, err := checkoutClient.AddNewProduct(context.Background(), &checkoutv1.AddNewProductRequest{
+						_, err := checkoutClient.AddNewProduct(ctx, &checkoutv1.AddNewProductRequest{
 							Product: &commonv1.Product{
 								Sid:        product.SID,
 								Name:       product.Name,

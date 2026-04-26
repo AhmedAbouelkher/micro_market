@@ -1,6 +1,6 @@
 # Micro Market
 
-Micro Market is a small microservices demo built to show practical OpenTelemetry use across tracing, logging, and metrics. The project is designed for a technical interview setting, so it stays intentionally simple while still covering the core observability flow end to end.
+Micro Market is a small microservices demo built around checkout, inventory, and invoice workflows. It shows practical OpenTelemetry use across tracing, logging, and metrics, while staying simple enough for a technical interview setting.
 
 ## Table of Contents
 
@@ -20,12 +20,13 @@ Micro Market is a small microservices demo built to show practical OpenTelemetry
 
 [Back to contents](#table-of-contents)
 
-Micro Market uses a microservices architecture with two business services:
+Micro Market uses a microservices architecture with three business services:
 
-- `checkout-service` manages users, orders, and product-related checkout actions.
+- `checkout-service` manages user checkout flows and order actions.
 - `inventory-service` manages products and stock reservations.
+- `invoice-service` creates invoices, stores them in SQLite, and generates PDFs.
 
-The services talk through gRPC for internal communication and expose HTTP APIs for direct interaction. OpenTelemetry is used to trace requests, capture logs, and export metrics so service behavior can be inspected quickly when something goes wrong.
+The services expose HTTP APIs and use gRPC or Redis where cross-service coordination is needed. OpenTelemetry traces requests, captures logs, and exports metrics so service behavior can be inspected quickly when something goes wrong.
 
 ## Why This Project Exists
 
@@ -42,7 +43,7 @@ The main goal is to demonstrate understanding of observability fundamentals, not
 
 [Back to contents](#table-of-contents)
 
-The system centers around two application services plus a telemetry stack.
+The system centers around three application services plus a telemetry stack.
 
 ```mermaid
 flowchart LR
@@ -51,6 +52,7 @@ flowchart LR
   subgraph App[Application layer]
     Checkout[checkout-service]
     Inventory[inventory-service]
+    Invoice[invoice-service]
     Checkout -->|HTTP API| User
     Inventory -->|HTTP API| User
     Checkout <-->|gRPC| Inventory
@@ -66,6 +68,7 @@ flowchart LR
 
   Checkout -. traces / logs / metrics .-> OTEL
   Inventory -. traces / logs / metrics .-> OTEL
+  Invoice -. traces / logs / metrics .-> OTEL
   User --> Checkout
   User --> Inventory
 ```
@@ -84,6 +87,10 @@ Handles product management and order flows on the checkout side. It exposes HTTP
 
 Owns product stock and reservation logic. It exposes HTTP routes and gRPC handlers, and calls checkout when order registration needs to stay in sync.
 
+### `invoice-service`
+
+Receives invoice creation requests over HTTP, persists invoice data in SQLite, listens for Redis events, and generates invoice PDFs.
+
 ## Repository Structure
 
 [Back to contents](#table-of-contents)
@@ -92,6 +99,7 @@ Owns product stock and reservation logic. It exposes HTTP routes and gRPC handle
 micro_market/
 ├── checkout-service/        checkout app, HTTP API, gRPC server, models, DB setup
 ├── inventory-service/       inventory app, HTTP API, gRPC server, models, DB setup
+├── invoice-service/         invoice app, HTTP API, SQLite, Redis consumer, PDF generation
 ├── common/                  shared OpenTelemetry, JSON, error, and utility helpers
 ├── proto/                   protobuf contracts for service APIs
 ├── gen/                     generated gRPC and protobuf code
@@ -124,16 +132,18 @@ Telemetry is exported through the local collector stack and can also be routed t
 
 The main interaction path is:
 
-1. A client or the load generator calls an HTTP endpoint.
+1. A client or the load generator calls checkout or inventory over HTTP.
 2. The receiving service performs local validation and DB work.
-3. If stock or order coordination is needed, the service calls the other service over gRPC.
-4. Both services emit telemetry spans, logs, and metrics.
+3. If stock or order coordination is needed, checkout and inventory talk over gRPC.
+4. `invoice-service` exposes its own HTTP API and also listens for `create_invoice` Redis messages to generate invoices and PDFs.
+5. All services emit telemetry spans, logs, and metrics.
 
 ```mermaid
 sequenceDiagram
-  participant C as Client / Load Generator
+  participant C as Client
   participant CH as checkout-service
   participant IN as inventory-service
+  participant IV as invoice-service
 
   C->>CH: HTTP request
   CH->>CH: validate + persist
@@ -141,6 +151,8 @@ sequenceDiagram
   IN->>IN: reserve / register order
   IN-->>CH: response
   CH-->>C: HTTP response
+  C->>IV: Direct HTTP request to invoice API
+  Note over IV: also consumes create_invoice Redis events
 ```
 
 ## Running
@@ -153,9 +165,12 @@ You have 3 ways to run and play with the project.
 
 Run services directly with Go:
 
+For `invoice-service`, run `./scripts/install_invoice_service_deps_local.sh` first on a fresh machine. It installs the invoice service submodules and native dependencies required by the local build.
+
 ```bash
 INVENTORY_SERVICE_ADDRESS=localhost:9090 GRPC_PORT=8080 HTTP_PORT=8888 make run_checkout
 CHECKOUT_SERVICE_ADDRESS=localhost:8080 GRPC_PORT=9090 HTTP_PORT=9999 make run_inventory
+REDIS_HOST=localhost REDIS_PORT=6379 make run_invoice
 docker run -p 3000:3000 -p 4317:4317 -p 4318:4318 --rm -ti grafana/otel-lgtm
 ```
 

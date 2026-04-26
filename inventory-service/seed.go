@@ -60,7 +60,6 @@ func RunSeed(ctx context.Context) error {
 								return err
 							}
 							telemetry.LogErrorlnf("product: %s, error: %v", product.SID, err)
-							return err
 						}
 					}
 					return nil

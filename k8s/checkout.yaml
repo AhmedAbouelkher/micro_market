@@ -31,6 +31,8 @@ spec:
               value: checkout-service
             - name: SERVICE_VERSION
               value: 0.0.1
+            - name: REDIS_CHANNEL
+              value: create_invoice
           readinessProbe:
             tcpSocket:
               port: 1234

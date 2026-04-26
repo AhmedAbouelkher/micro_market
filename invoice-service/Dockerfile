@@ -22,6 +22,8 @@ WORKDIR /app
 
 COPY . .
 
+RUN mkdir -p libs
+
 # Install SQLite3
 RUN wget -O sqlite_amalgamation.zip https://sqlite.org/2026/sqlite-amalgamation-3530000.zip \
     && unzip sqlite_amalgamation.zip -d sqlite_amalgamation \

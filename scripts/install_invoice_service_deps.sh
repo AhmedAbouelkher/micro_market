@@ -4,11 +4,12 @@
 INVOICE_SERVICE_NAME="invoice-service"
 INVOICE_SERVICE_LIBS_PATH="$INVOICE_SERVICE_NAME/libs"
 
-# check if we are in the root directory, if not move back to the root directory.
-if [ "$(basename "$(pwd)")" != "micro_market" ]; then
-    echo "We are not in the micro_market directory, moving back to the micro_market directory"
-    cd ..
+# find repo root, no matter where script launch from
+ROOT_DIR="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [ -z "$ROOT_DIR" ]; then
+    ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 fi
+cd "$ROOT_DIR" || exit 1
 
 install_git_submodules() {
     # Install the git submodules
@@ -23,6 +24,11 @@ install_git_submodules() {
 
     if [ ! -d "$INVOICE_SERVICE_LIBS_PATH/httpserver" ]; then
         echo "httpserver submodule not found, throwing an error"
+        exit 1
+    fi
+
+    if [ ! -d "$INVOICE_SERVICE_LIBS_PATH/ulid" ]; then
+        echo "ulid submodule not found, throwing an error"
         exit 1
     fi
 }

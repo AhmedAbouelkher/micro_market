@@ -1,6 +1,6 @@
 # Micro Market
 
-Micro Market is a small microservices demo built around checkout, inventory, and invoice workflows. It shows practical OpenTelemetry use across tracing, logging, and metrics, while staying simple enough for a technical interview setting.
+Micro Market is a small microservices demo built around checkout, inventory, and invoice workflows. The repo mixes Go and C services: checkout and inventory focus on request handling and telemetry, while `invoice-service` stores invoice data in SQLite, listens to Redis events, and generates PDFs in C.
 
 ## Table of Contents
 
@@ -24,7 +24,7 @@ Micro Market uses a microservices architecture with three business services:
 
 - `checkout-service` manages user checkout flows and order actions.
 - `inventory-service` manages products and stock reservations.
-- `invoice-service` creates invoices, stores them in SQLite, and generates PDFs.
+- `[invoice-service](./invoice-service/README.md)` creates invoices, stores them in SQLite, and generates PDFs.
 
 The services expose HTTP APIs and use gRPC or Redis where cross-service coordination is needed. OpenTelemetry traces requests, captures logs, and exports metrics so service behavior can be inspected quickly when something goes wrong.
 
@@ -225,7 +225,12 @@ I used AI for:
 .cursor/
 ├── rules/
 │   ├── Caveman.mdc
-│   └── General-Project-Rules.mdc
+│   ├── Clean-code.mdc
+│   ├── Code-quality.mdc
+│   ├── Docker-best-practices.mdc
+│   ├── Docker-guidelines.mdc
+│   ├── General-Project-Rules.mdc
+│   └── Recommended-C-style-and-coding-rules.mdc
 └── skills/
     └── caveman/
         └── SKILL.md

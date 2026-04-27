@@ -182,7 +182,7 @@ docker run --rm -p 8080:8080 \
 
 ## JSON Parsing Note
 
-`get_json_value` in `[utils.c](utils.c)` is a tiny hand-rolled JSON extractor.
+`get_json_value` in [`utils.c`](./utils.c) is a tiny hand-rolled JSON extractor.
 
 Why it acts like a mini parser:
 

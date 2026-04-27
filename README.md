@@ -22,7 +22,7 @@ Micro Market is a small microservices demo built around checkout, inventory, and
 
 Micro Market uses a microservices architecture with three business services:
 
-- `checkout-service` manages user checkout flows and order actions.
+- [`checkout-service`](./checkout-service/README.md) manages user checkout flows and order actions.
 - `inventory-service` manages products and stock reservations.
 - [`invoice-service`](./invoice-service/README.md) creates invoices, stores them in SQLite, and generates PDFs.
 

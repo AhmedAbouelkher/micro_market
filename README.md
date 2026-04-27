@@ -25,6 +25,7 @@ Micro Market uses a microservices architecture with three business services:
 - [`checkout-service`](./checkout-service) manages user checkout flows and order actions.
 - `inventory-service` manages products and stock reservations.
 - [`invoice-service`](./invoice-service) creates invoices, stores them in SQLite, and generates PDFs.
+- [`custom-collector`](./custom-collector) is a custom collector that can be used to collect telemetry data from the services.
 
 The services expose HTTP APIs and use gRPC or Redis where cross-service coordination is needed. OpenTelemetry traces requests, captures logs, and exports metrics so service behavior can be inspected quickly when something goes wrong.
 
@@ -91,22 +92,28 @@ Owns product stock and reservation logic. It exposes HTTP routes and gRPC handle
 
 Receives invoice creation requests over HTTP, persists invoice data in SQLite, listens for Redis events, and generates invoice PDFs.
 
+### `custom-collector`
+
+A custom collector that can be used to collect telemetry data from the services.
+
 ## Repository Structure
 
 [Back to contents](#table-of-contents)
 
 ```text
 micro_market/
-├── checkout-service/        checkout app, HTTP API, gRPC server, models, DB setup
-├── inventory-service/       inventory app, HTTP API, gRPC server, models, DB setup
-├── invoice-service/         invoice app, HTTP API, SQLite, Redis consumer, PDF generation
+├── checkout-service/        checkout API, gRPC client/server code, DB layer, models
+├── inventory-service/       inventory API, gRPC client/server code, DB layer, models
+├── invoice-service/         invoice API, SQLite persistence, Redis consumer, PDF generation
 ├── common/                  shared OpenTelemetry, JSON, error, and utility helpers
 ├── proto/                   protobuf contracts for service APIs
 ├── gen/                     generated gRPC and protobuf code
 ├── cmd/load-generator/      traffic generator binary
-├── scripts/                 helper scripts for local Kubernetes and load generation
-├── k8s/                     Kubernetes manifests and customization
-└── docker-compose.yml       local multi-container stack
+├── scripts/                 local setup, port-forwarding, and Kubernetes helpers
+├── k8s/                     Kubernetes manifests and overlays
+├── custom-collector/        custom OpenTelemetry collector build and processor
+├── docker-compose.yml       local multi-container stack
+└── otelcol-config.yaml      local collector configuration
 ```
 
 ## Observability
@@ -132,11 +139,11 @@ Telemetry is exported through the local collector stack and can also be routed t
 
 The main interaction path is:
 
-1. A client or the load generator calls checkout or inventory over HTTP.
-2. The receiving service performs local validation and DB work.
-3. If stock or order coordination is needed, checkout and inventory talk over gRPC.
-4. `invoice-service` exposes its own HTTP API and also listens for `create_invoice` Redis messages to generate invoices and PDFs.
-5. All services emit telemetry spans, logs, and metrics.
+1. A client or the load generator calls `checkout-service` or `inventory-service` over HTTP.
+2. The receiving service validates the request and performs its local DB work.
+3. When stock or order coordination is needed, `checkout-service` and `inventory-service` call each other over gRPC.
+4. `invoice-service` exposes its own HTTP API, stores invoices in SQLite, and consumes `create_invoice` Redis messages to generate invoices and PDFs.
+5. All services send traces, logs, and metrics through the OpenTelemetry stack.
 
 ```mermaid
 sequenceDiagram
@@ -179,6 +186,7 @@ docker run -p 3000:3000 -p 4317:4317 -p 4318:4318 --rm -ti grafana/otel-lgtm
 Use `docker-compose.example.yml` as a reference if you want to plug in your own external collector config. That part is optional.
 
 ```bash
+cp docker-compose.example.yml docker-compose.yml
 docker compose up --build
 docker compose down
 ```

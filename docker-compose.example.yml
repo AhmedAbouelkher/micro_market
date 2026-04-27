@@ -1,11 +1,8 @@
-services:
-  redis:
-    image: redis:8.4.2-alpine
-  
+services:  
   invoice:
     build:
-      context: .
-      dockerfile: invoice-service/Dockerfile
+      context: ./invoice-service
+      dockerfile: Dockerfile
     environment:
       HTTP_PORT: 8080
       REDIS_HOST: redis
@@ -35,11 +32,10 @@ services:
     volumes:
       - checkout-db:/usr/src/app/data
     ports:
-      - "8888:1234"
+      - "8880:1234"
       # - "8080:50051"
     depends_on:
       - redis
-
 
   inventory:
     build:
@@ -50,6 +46,7 @@ services:
       CHECKOUT_SERVICE_ADDRESS: checkout:50051
       SERVICE_NAME: inventory-service
       SERVICE_VERSION: 0.5.2
+      OTEL_LOGS_ENDPOINT: custom_collector:4317 
     volumes:
       - inventory-db:/usr/src/app/data
     ports:
@@ -57,7 +54,16 @@ services:
       # - "9099:50051"
     depends_on:
       - checkout
+  
+  custom_collector:
+    build:
+      context: ./custom-collector
+      dockerfile: Dockerfile
+    volumes:
+      - ./custom-collector/collector-config.yaml:/otelcol/collector-config.yaml:ro
 
+  redis:
+    image: redis:8.4.2-alpine
 
   grafana-otel:
     image: grafana/otel-lgtm:latest

@@ -2,7 +2,14 @@ PROTO_DIR=./proto
 GEN_DIR=./gen
 BINARY_DIR=./bin
 
-.PHONY: run_checkout run_inventory run_invoice build_checkout build_inventory build_invoice gen docker-build-checkout docker-build-inventory docker-build-invoice
+.PHONY: run_checkout run_inventory run_invoice build_checkout build_inventory build_invoice gen docker-build-checkout docker-build-inventory docker-build-invoice compose-up compose-down
+
+compose-up:
+	@if [ ! -f docker-compose.yml ]; then cp docker-compose.example.yml docker-compose.yml; fi
+	docker compose up -d
+
+compose-down:
+	docker compose down
 
 run_checkout: gen tidy build_checkout
 	cd checkout-service && ./$(BINARY_DIR)/service
@@ -37,6 +44,7 @@ tidy:
 	go mod tidy
 	cd checkout-service && go mod tidy
 	cd inventory-service && go mod tidy
+	cd custom-collector/cprocessor && go mod tidy
 
 gen:
 	mkdir -p $(GEN_DIR)
@@ -47,4 +55,3 @@ gen:
 	$(PROTO_DIR)/common/v1/*.proto \
 	$(PROTO_DIR)/checkout/v1/*.proto \
 	$(PROTO_DIR)/inventory/v1/*.proto
-

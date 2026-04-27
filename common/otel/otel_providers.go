@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"micro_market/common"
 	"os"
-	"runtime"
 	"time"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -23,10 +21,14 @@ import (
 
 var (
 	collectorEndpoint = common.EnvOrDef("OTEL_COLLECTOR_ENDPOINT", "localhost:4317")
+
+	tracesEndpoint  = common.EnvOrDef("OTEL_TRACES_ENDPOINT", collectorEndpoint)
+	metricsEndpoint = common.EnvOrDef("OTEL_METRICS_ENDPOINT", collectorEndpoint)
+	logsEndpoint    = common.EnvOrDef("OTEL_LOGS_ENDPOINT", collectorEndpoint)
 )
 
 func newLoggerProvider(ctx context.Context, res *resource.Resource) (*log.LoggerProvider, error) {
-	exporter, err := otlploggrpc.New(ctx, otlploggrpc.WithEndpoint(collectorEndpoint), otlploggrpc.WithInsecure())
+	exporter, err := otlploggrpc.New(ctx, otlploggrpc.WithEndpoint(logsEndpoint), otlploggrpc.WithInsecure())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OTLP log exporter: %w", err)
 	}
@@ -42,7 +44,7 @@ func newLoggerProvider(ctx context.Context, res *resource.Resource) (*log.Logger
 
 func newMeterProvider(ctx context.Context, res *resource.Resource) (*metric.MeterProvider, error) {
 	exporter, err := otlpmetricgrpc.New(ctx,
-		otlpmetricgrpc.WithEndpoint(collectorEndpoint),
+		otlpmetricgrpc.WithEndpoint(metricsEndpoint),
 		otlpmetricgrpc.WithInsecure())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OTLP metric exporter: %w", err)
@@ -59,7 +61,7 @@ func newMeterProvider(ctx context.Context, res *resource.Resource) (*metric.Mete
 
 func newTracerProvider(ctx context.Context, res *resource.Resource, propagators propagation.TextMapPropagator) (*trace.TracerProvider, error) {
 	exporter, err := otlptracegrpc.New(ctx,
-		otlptracegrpc.WithEndpoint(collectorEndpoint),
+		otlptracegrpc.WithEndpoint(tracesEndpoint),
 		otlptracegrpc.WithInsecure())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OTLP trace exporter: %w", err)
@@ -84,8 +86,5 @@ func newResource(serviceName string, serviceVersion string) *resource.Resource {
 		semconv.ServiceName(serviceName),
 		semconv.ServiceVersion(serviceVersion),
 		semconv.HostName(hostName),
-		semconv.OSName(runtime.GOOS),
-		semconv.OSVersion(runtime.GOARCH),
-		attribute.String("os.runtime", runtime.GOOS),
 	)
 }

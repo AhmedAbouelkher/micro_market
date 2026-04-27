@@ -23,6 +23,11 @@ func InitRedisDB(ctx context.Context) error {
 	if err := redisClient.Ping(ctx).Err(); err != nil {
 		return err
 	}
+
+	if err := telemetry.UseRedisPlugin(redisClient); err != nil {
+		return err
+	}
+
 	return nil
 }
 

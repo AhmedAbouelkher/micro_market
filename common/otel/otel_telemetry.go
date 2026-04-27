@@ -2,9 +2,12 @@ package common_otel
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
+	"github.com/redis/go-redis/extra/redisotel/v9"
+	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/bridges/otellogrus"
 	otelruntime "go.opentelemetry.io/contrib/instrumentation/runtime"
@@ -26,6 +29,7 @@ type Metric struct {
 
 type TelemetryProvider interface {
 	GetServiceName() string
+	Logger() *logrus.Logger
 	LogInfo(args ...interface{})
 	LogErrorln(args ...interface{})
 	LogFatalln(args ...interface{})
@@ -42,6 +46,7 @@ type TelemetryProvider interface {
 	MeterRequestInFlight(next http.Handler) http.Handler
 	MuxMiddleware(next http.Handler) http.Handler
 	UseGormPlugin(db *gorm.DB) error
+	UseRedisPlugin(rdb redis.UniversalClient) error
 	Close(ctx context.Context)
 }
 
@@ -113,6 +118,7 @@ func NewTelemetry(ctx context.Context, cfg TelemetryConfig) (*Telemetry, error) 
 
 func (t *Telemetry) GetServiceName() string { return t.cfg.ServiceName }
 
+func (t *Telemetry) Logger() *logrus.Logger                         { return t.log }
 func (t *Telemetry) LogInfo(args ...interface{})                    { t.log.Info(args...) }
 func (t *Telemetry) LogErrorln(args ...interface{})                 { t.log.Errorln(args...) }
 func (t *Telemetry) LogFatalln(args ...interface{})                 { t.log.Fatalln(args...) }
@@ -162,6 +168,11 @@ func (t *Telemetry) TraceStart(ctx context.Context, name string) (context.Contex
 
 func (t *Telemetry) UseGormPlugin(db *gorm.DB) error {
 	return db.Use(t.gormPlugin)
+}
+
+func (t *Telemetry) UseRedisPlugin(rdb redis.UniversalClient) error {
+	return errors.Join(redisotel.InstrumentTracing(rdb, redisotel.WithTracerProvider(t.tp)),
+		redisotel.InstrumentMetrics(rdb, redisotel.WithMeterProvider(t.mp)))
 }
 
 func (t *Telemetry) Close(ctx context.Context) {

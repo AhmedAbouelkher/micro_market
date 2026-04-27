@@ -44,6 +44,10 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 	_, span := telemetry.TraceStart(r.Context(), "GET /health")
 	defer span.End()
 
+	// Quick check to see if the logging processor is working
+	telemetry.Logger().WithField("user.email", "ahmed@example.com").
+		Info("Health check")
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]any{"message": "OK"})
